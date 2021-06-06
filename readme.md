@@ -1,4 +1,4 @@
-# ushell
+# uShell
 
 🐚 [WIP] Embedded serial shell.
 

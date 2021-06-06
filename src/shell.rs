@@ -91,9 +91,7 @@ where
                     control::CR => {
                         let cmd = from_utf8(&self.cmd_buf[..self.cmd_len])
                             .map_err(ShellError::BadInputError)?;
-                        self.history
-                            .push_top(cmd)
-                            .map_err(ShellError::HistoryError)?;
+                        self.history.push(cmd).map_err(ShellError::HistoryError)?;
 
                         self.cmd_len = 0;
                         self.cursor = 0;
@@ -185,7 +183,7 @@ where
     }
 
     fn dpad_up(&mut self) -> ShellResult<S> {
-        if self.cursor != 0 && self.cursor != self.cmd_len {
+        if self.cursor != self.cmd_len {
             return self.bell();
         }
         match self.history.go_back() {
@@ -195,7 +193,7 @@ where
     }
 
     fn dpad_down(&mut self) -> ShellResult<S> {
-        if self.cursor != 0 && self.cursor != self.cmd_len {
+        if self.cursor != self.cmd_len {
             return self.bell();
         }
         match self.history.go_forward() {

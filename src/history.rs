@@ -5,7 +5,7 @@ use crate::uluru::LRUCache;
 
 pub trait History<const COMMAND_LEN: usize> {
     fn reset(&mut self);
-    fn push_top(&mut self, command: &str) -> Result<(), ()>;
+    fn push(&mut self, command: &str) -> Result<(), ()>;
     fn go_back(&mut self) -> Option<String<COMMAND_LEN>>;
     fn go_forward(&mut self) -> Option<String<COMMAND_LEN>>;
 }
@@ -15,7 +15,7 @@ pub struct NoHistory;
 impl<const COMMAND_LEN: usize> History<COMMAND_LEN> for NoHistory {
     fn reset(&mut self) {}
 
-    fn push_top(&mut self, _command: &str) -> Result<(), ()> {
+    fn push(&mut self, _command: &str) -> Result<(), ()> {
         Ok(())
     }
 
@@ -52,7 +52,7 @@ impl<const COMMAND_LEN: usize, const HISTORY_LEN: usize> History<COMMAND_LEN>
         self.history = LRUCache::default();
     }
 
-    fn push_top(&mut self, command: &str) -> Result<(), ()> {
+    fn push(&mut self, command: &str) -> Result<(), ()> {
         if command.len() > 0 && HISTORY_LEN > 0 {
             if self.history.find(|item| item.as_str() == command).is_none() {
                 let history_entry = String::from_str(command)?;
