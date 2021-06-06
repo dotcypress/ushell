@@ -15,7 +15,3 @@ nb = "1.0.0"
 [dependencies.embedded-hal]
 features = ["unproven"]
 version = "0.2.4"
-
-[dependencies.uluru]
-git = "https://github.com/dotcypress/uluru.git"
-branch = "feature/index-access" 
