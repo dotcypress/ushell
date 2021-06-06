@@ -5,6 +5,7 @@
 extern crate embedded_hal as hal;
 extern crate heapless;
 extern crate nb;
+extern crate uluru;
 
 use core::{fmt, str::Utf8Error};
 use hal::serial::{Read, Write};
