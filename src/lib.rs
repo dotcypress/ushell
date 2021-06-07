@@ -31,32 +31,8 @@ where
 
 pub type ShellResult<S> = Result<(), ShellError<S>>;
 pub type PollResult<'a, S> = Result<Option<Input<'a>>, ShellError<S>>;
-pub enum InputKind<'a> {
+pub enum Input<'a> {
+    Raw(u8),
     Control(u8),
-    Command(&'a str),
-}
-
-pub struct Input<'a> {
-    pub raw: u8,
-    pub input: Option<InputKind<'a>>,
-}
-
-impl<'a> Input<'a> {
-    fn raw(raw: u8) -> Self {
-        Input { raw, input: None }
-    }
-
-    fn control(raw: u8) -> Self {
-        Input {
-            raw,
-            input: Some(InputKind::Control(raw)),
-        }
-    }
-
-    fn command(raw: u8, line: &'a str) -> Self {
-        Input {
-            raw,
-            input: Some(InputKind::Command(line)),
-        }
-    }
+    Command(u8, &'a str),
 }

@@ -56,7 +56,7 @@ where
         match self.serial.read() {
             Ok(byte) => {
                 if self.bypass {
-                    return Ok(Some(Input::raw(byte)));
+                    return Ok(Some(Input::Raw(byte)));
                 }
 
                 match byte {
@@ -79,7 +79,7 @@ where
                             RIGHT => self.dpad_right()?,
                             UP => self.dpad_up()?,
                             DOWN => self.dpad_down()?,
-                            _ => return Ok(Some(Input::control(control_byte))),
+                            _ => return Ok(Some(Input::Control(control_byte))),
                         }
                     }
                     _ if self.escape => {
@@ -92,15 +92,13 @@ where
                         let cmd = from_utf8(&self.cmd_buf[..self.cmd_len])
                             .map_err(ShellError::BadInputError)?;
                         self.history.push(cmd).map_err(ShellError::HistoryError)?;
-
                         self.cmd_len = 0;
                         self.cursor = 0;
-                        return Ok(Some(Input::command(byte, cmd)));
+                        return Ok(Some(Input::Command(byte, cmd)));
                     }
                     _ => self.write_at_cursor(byte)?,
                 };
-
-                Ok(Some(Input::raw(byte)))
+                Ok(Some(Input::Raw(byte)))
             }
             Err(nb::Error::WouldBlock) => Ok(None),
             Err(nb::Error::Other(err)) => Err(ShellError::ReadError(err)),
@@ -116,6 +114,10 @@ where
 
     pub fn bell(&mut self) -> ShellResult<S> {
         block!(self.serial.write(control::BELL)).map_err(ShellError::WriteError)
+    }
+
+    pub fn push_history(&mut self, cmd: &str) -> ShellResult<S> {
+        self.history.push(cmd).map_err(ShellError::HistoryError)
     }
 
     fn write_at_cursor(&mut self, byte: u8) -> ShellResult<S> {
