@@ -121,7 +121,9 @@ where
     }
 
     fn write_at_cursor(&mut self, byte: u8) -> ShellResult<S> {
-        if self.cursor < self.cmd_len {
+        if self.cursor == self.cmd_buf.len() {
+            return self.bell();
+        } else if self.cursor < self.cmd_len {
             block!(self.serial.write(byte)).map_err(ShellError::WriteError)?;
 
             self.cmd_buf
