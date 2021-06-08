@@ -6,7 +6,7 @@ edition = "2018"
 license = "MIT/Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/dotcypress/ushell"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies]
 heapless = "0.7.1"

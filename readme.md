@@ -2,7 +2,7 @@
 
 🐚 Embedded shell over serial connection.
 
-You can check pout simple usage example [here](https://github.com/dotcypress/ushell-rtic-example).
+You can check out simple [usage example here](https://github.com/dotcypress/ushell-rtic-example).
 
 ## License
 
