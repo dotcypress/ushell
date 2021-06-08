@@ -27,21 +27,10 @@ impl<const COMMAND_LEN: usize> History<COMMAND_LEN> for NoHistory {
         None
     }
 }
-
+#[derive(Default)]
 pub struct LRUHistory<const COMMAND_LEN: usize, const HISTORY_LEN: usize> {
     history: LRUCache<String<COMMAND_LEN>, HISTORY_LEN>,
     pos: usize,
-}
-
-impl<const COMMAND_LEN: usize, const HISTORY_LEN: usize> Default
-    for LRUHistory<COMMAND_LEN, HISTORY_LEN>
-{
-    fn default() -> Self {
-        Self {
-            pos: 0,
-            history: LRUCache::default(),
-        }
-    }
 }
 
 impl<const COMMAND_LEN: usize, const HISTORY_LEN: usize> History<COMMAND_LEN>

@@ -1,6 +1,8 @@
 # uShell
 
-🐚 [WIP] Embedded serial shell.
+🐚 Embedded shell over serial connection.
+
+You can check pout simple usage example [here](https://github.com/dotcypress/ushell-rtic-example).
 
 ## License
 

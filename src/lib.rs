@@ -29,9 +29,6 @@ where
     HistoryError(()),
 }
 
-pub type ShellResult<S> = Result<(), ShellError<S>>;
-pub type PollResult<'a, S> = Result<Option<Input<'a>>, ShellError<S>>;
-
 pub enum Input<'a> {
     Raw(u8),
     Control(u8),

@@ -6,6 +6,9 @@ use crate::autocomplete::Autocomplete;
 use crate::history::History;
 use crate::*;
 
+pub type ShellResult<S> = Result<(), ShellError<S>>;
+pub type PollResult<'a, S> = Result<Option<Input<'a>>, ShellError<S>>;
+
 pub struct UShell<S, A, H, const COMMAND_LEN: usize> {
     serial: S,
     autocomplete: A,
