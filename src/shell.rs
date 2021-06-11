@@ -17,6 +17,7 @@ pub struct UShell<S, A, H, const COMMAND_LEN: usize> {
     cmd_len: usize,
     cursor: usize,
     bypass: bool,
+    echo: bool,
     control: bool,
     escape: bool,
 }
@@ -36,6 +37,7 @@ where
             cmd_len: 0,
             cursor: 0,
             bypass: false,
+            echo: true,
             control: false,
             escape: false,
         }
@@ -43,6 +45,10 @@ where
 
     pub fn bypass(&mut self, bypass_on: bool) {
         self.bypass = bypass_on;
+    }
+
+    pub fn echo(&mut self, echo_on: bool) {
+        self.echo = echo_on;
     }
 
     pub fn reset(&mut self) {
@@ -81,7 +87,7 @@ where
                             RIGHT => self.dpad_right()?,
                             UP => self.dpad_up()?,
                             DOWN => self.dpad_down()?,
-                            _ => {},
+                            _ => {}
                         }
                     }
                     _ if self.escape => {
@@ -93,12 +99,15 @@ where
                     control::CR => {
                         let cmd = from_utf8(&self.cmd_buf[..self.cmd_len])
                             .map_err(ShellError::BadInputError)?;
-                        self.history.push(cmd).map_err(ShellError::HistoryError)?;
+                        self.history
+                            .push(cmd)
+                            .map_err(|_| ShellError::HistoryError)?;
                         self.cmd_len = 0;
                         self.cursor = 0;
                         return Ok(Some(Input::Command(byte, cmd)));
                     }
-                    _ => self.write_at_cursor(byte)?,
+                    _ if self.echo => self.write_at_cursor(byte)?,
+                    _ => {}
                 };
                 Ok(Some(Input::Raw(byte)))
             }
@@ -119,7 +128,7 @@ where
     }
 
     pub fn push_history(&mut self, cmd: &str) -> ShellResult<S> {
-        self.history.push(cmd).map_err(ShellError::HistoryError)
+        self.history.push(cmd).map_err(|_| ShellError::HistoryError)
     }
 
     fn write_at_cursor(&mut self, byte: u8) -> ShellResult<S> {

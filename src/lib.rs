@@ -26,7 +26,7 @@ where
     WriteError(<S as Write<u8>>::Error),
     FormatError(fmt::Error),
     BadInputError(Utf8Error),
-    HistoryError(()),
+    HistoryError,
 }
 
 pub enum Input<'a> {
