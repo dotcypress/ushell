@@ -31,6 +31,5 @@ where
 
 pub enum Input<'a> {
     Raw(u8),
-    Control(u8),
     Command(u8, &'a str),
 }

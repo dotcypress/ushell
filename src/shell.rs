@@ -46,7 +46,6 @@ where
     }
 
     pub fn reset(&mut self) {
-        self.history.reset();
         self.control = false;
         self.escape = false;
         self.cursor = 0;
@@ -82,7 +81,7 @@ where
                             RIGHT => self.dpad_right()?,
                             UP => self.dpad_up()?,
                             DOWN => self.dpad_down()?,
-                            _ => return Ok(Some(Input::Control(control_byte))),
+                            _ => {},
                         }
                     }
                     _ if self.escape => {
