@@ -16,8 +16,10 @@ pub struct UShell<S, A, H, const COMMAND_LEN: usize> {
     cmd_buf: [u8; COMMAND_LEN],
     cmd_len: usize,
     cursor: usize,
-    bypass: bool,
-    echo: bool,
+    autocomplete_on: bool,
+    history_on: bool,
+    bypass_on: bool,
+    echo_on: bool,
     control: bool,
     escape: bool,
 }
@@ -36,19 +38,29 @@ where
             cmd_buf: [0; COMMAND_LEN],
             cmd_len: 0,
             cursor: 0,
-            bypass: false,
-            echo: true,
+            autocomplete_on: true,
+            history_on: true,
+            bypass_on: false,
+            echo_on: true,
             control: false,
             escape: false,
         }
     }
 
+    pub fn autocomplete(&mut self, autocomplete_on: bool) {
+        self.autocomplete_on = autocomplete_on;
+    }
+
+    pub fn history(&mut self, history_on: bool) {
+        self.history_on = history_on;
+    }
+
     pub fn bypass(&mut self, bypass_on: bool) {
-        self.bypass = bypass_on;
+        self.bypass_on = bypass_on;
     }
 
     pub fn echo(&mut self, echo_on: bool) {
-        self.echo = echo_on;
+        self.echo_on = echo_on;
     }
 
     pub fn reset(&mut self) {
@@ -63,7 +75,7 @@ where
 
         match self.serial.read() {
             Ok(byte) => {
-                if self.bypass {
+                if self.bypass_on {
                     return Ok(Some(Input::Raw(byte)));
                 }
 
@@ -94,7 +106,13 @@ where
                         self.escape = false;
                         self.control = false;
                     }
-                    control::TAB => self.autocomplete()?,
+                    control::TAB => {
+                        if self.autocomplete_on {
+                            self.suggest()?
+                        } else {
+                            self.bell()?
+                        }
+                    }
                     control::DEL | control::BS => self.delete_at_cursor()?,
                     control::CR => {
                         let cmd = from_utf8(&self.cmd_buf[..self.cmd_len])
@@ -106,7 +124,7 @@ where
                         self.cursor = 0;
                         return Ok(Some(Input::Command(byte, cmd)));
                     }
-                    _ if self.echo => self.write_at_cursor(byte)?,
+                    _ if self.echo_on => self.write_at_cursor(byte)?,
                     _ => {}
                 };
                 Ok(Some(Input::Raw(byte)))
@@ -198,7 +216,7 @@ where
     }
 
     fn dpad_up(&mut self) -> ShellResult<S> {
-        if self.cursor != self.cmd_len {
+        if self.cursor != self.cmd_len || !self.history_on {
             return self.bell();
         }
         match self.history.go_back() {
@@ -208,7 +226,7 @@ where
     }
 
     fn dpad_down(&mut self) -> ShellResult<S> {
-        if self.cursor != self.cmd_len {
+        if self.cursor != self.cmd_len || !self.history_on {
             return self.bell();
         }
         match self.history.go_forward() {
@@ -217,7 +235,7 @@ where
         }
     }
 
-    fn autocomplete(&mut self) -> ShellResult<S> {
+    fn suggest(&mut self) -> ShellResult<S> {
         let prefix = from_utf8(&self.cmd_buf[..self.cursor]).map_err(ShellError::BadInputError)?;
         match self.autocomplete.suggest(prefix) {
             None => self.bell(),
