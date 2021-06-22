@@ -16,12 +16,12 @@ pub struct UShell<S, A, H, const COMMAND_LEN: usize> {
     cmd_buf: [u8; COMMAND_LEN],
     cmd_len: usize,
     cursor: usize,
+    control: bool,
+    escape: bool,
     autocomplete_on: bool,
     history_on: bool,
     bypass_on: bool,
     echo_on: bool,
-    control: bool,
-    escape: bool,
 }
 
 impl<S, A, H, const COMMAND_LEN: usize> UShell<S, A, H, COMMAND_LEN>
@@ -61,6 +61,14 @@ where
 
     pub fn echo(&mut self, echo_on: bool) {
         self.echo_on = echo_on;
+    }
+
+    pub fn get_autocomplete_mut(&mut self) -> &mut A {
+        &mut self.autocomplete
+    }
+
+    pub fn get_history_mut(&mut self) -> &mut H {
+        &mut self.history
     }
 
     pub fn reset(&mut self) {

@@ -1,5 +1,4 @@
 #![no_std]
-#![deny(warnings)]
 #![deny(unsafe_code)]
 
 extern crate embedded_hal as hal;

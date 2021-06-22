@@ -27,17 +27,18 @@ impl<const COMMAND_LEN: usize> History<COMMAND_LEN> for NoHistory {
         None
     }
 }
+
 #[derive(Default)]
 pub struct LRUHistory<const COMMAND_LEN: usize, const HISTORY_LEN: usize> {
     history: LRUCache<String<COMMAND_LEN>, HISTORY_LEN>,
-    pos: usize,
+    cursor: usize,
 }
 
 impl<const COMMAND_LEN: usize, const HISTORY_LEN: usize> History<COMMAND_LEN>
     for LRUHistory<COMMAND_LEN, HISTORY_LEN>
 {
     fn reset(&mut self) {
-        self.pos = 0;
+        self.cursor = 0;
         self.history = LRUCache::default();
     }
 
@@ -48,27 +49,27 @@ impl<const COMMAND_LEN: usize, const HISTORY_LEN: usize> History<COMMAND_LEN>
                 self.history.insert(history_entry);
             }
         }
-        self.pos = 0;
+        self.cursor = 0;
         Ok(())
     }
 
     fn go_back(&mut self) -> Option<String<COMMAND_LEN>> {
-        if self.history.len() == 0 || self.pos == self.history.len() {
+        if self.history.len() == 0 || self.cursor == self.history.len() {
             None
         } else {
-            let pos = self.pos;
-            self.pos += 1;
-            self.history.get(pos).cloned()
+            let cursor = self.cursor;
+            self.cursor += 1;
+            self.history.get(cursor).cloned()
         }
     }
 
     fn go_forward(&mut self) -> Option<String<COMMAND_LEN>> {
-        if self.pos == 0 || self.history.len() == 0 {
+        if self.cursor == 0 || self.history.len() == 0 {
             None
         } else {
-            self.pos -= 1;
-            let pos = self.pos;
-            self.history.get(pos).cloned()
+            self.cursor -= 1;
+            let cursor = self.cursor;
+            self.history.get(cursor).cloned()
         }
     }
 }
