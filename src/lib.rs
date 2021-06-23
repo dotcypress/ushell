@@ -25,10 +25,6 @@ where
     WriteError(<S as Write<u8>>::Error),
     FormatError(fmt::Error),
     BadInputError(Utf8Error),
+    WouldBlock,
     HistoryError,
-}
-
-pub enum Input<'a> {
-    Raw(u8),
-    Command(u8, &'a str),
 }
