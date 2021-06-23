@@ -7,7 +7,7 @@ use crate::history::History;
 use crate::*;
 
 pub type ShellResult<S> = Result<(), ShellError<S>>;
-pub type PollResult<'a, S> = Result<Option<(&'a str, &'a str)>, ShellError<S>>;
+pub type PollResult<'a, S> = Result<Option<Input<'a>>, ShellError<S>>;
 
 pub struct UShell<S, A, H, const MAX_LEN: usize> {
     serial: S,
@@ -20,7 +20,6 @@ pub struct UShell<S, A, H, const MAX_LEN: usize> {
     escape: bool,
     autocomplete_on: bool,
     history_on: bool,
-    echo_on: bool,
 }
 
 impl<S, A, H, const MAX_LEN: usize> UShell<S, A, H, MAX_LEN>
@@ -39,7 +38,6 @@ where
             editor_len: 0,
             autocomplete_on: true,
             history_on: true,
-            echo_on: true,
             control: false,
             escape: false,
         }
@@ -51,10 +49,6 @@ where
 
     pub fn history(&mut self, history_on: bool) {
         self.history_on = history_on;
-    }
-
-    pub fn echo(&mut self, echo_on: bool) {
-        self.echo_on = echo_on;
     }
 
     pub fn get_autocomplete_mut(&mut self) -> &mut A {
@@ -124,14 +118,22 @@ where
                             .map_err(|_| ShellError::HistoryError)?;
                         self.editor_len = 0;
                         self.cursor = 0;
-                        return Ok(Some(line.split_once(" ").unwrap_or((line, &""))));
+                        return Ok(Some(Input::Command(
+                            line.split_once(" ").unwrap_or((line, &"")),
+                        )));
                     }
-                    _ if self.echo_on => self.write_at_cursor(byte)?,
-                    _ => {}
+                    _ => {
+                        let ch = byte as char;
+                        if ch.is_ascii_control() {
+                            return Ok(Some(Input::Control(byte)));
+                        } else {
+                            self.write_at_cursor(byte)?;
+                        }
+                    }
                 };
                 Ok(None)
             }
-            Err(nb::Error::WouldBlock) =>Err(ShellError::WouldBlock),
+            Err(nb::Error::WouldBlock) => Err(ShellError::WouldBlock),
             Err(nb::Error::Other(err)) => Err(ShellError::ReadError(err)),
         }
     }

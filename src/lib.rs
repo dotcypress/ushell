@@ -28,3 +28,8 @@ where
     WouldBlock,
     HistoryError,
 }
+
+pub enum Input<'a> {
+    Control(u8),
+    Command((&'a str, &'a str)),
+}
