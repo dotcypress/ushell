@@ -50,6 +50,14 @@ impl<W, TX: Write<W>, RX: Read<W>> Serial<W, TX, RX> {
         }
     }
 
+    pub fn tx(&mut self) -> &mut TX {
+        &mut self.tx
+    }
+
+    pub fn rx(&mut self) -> &mut RX {
+        &mut self.rx
+    }
+
     pub fn split(self) -> (TX, RX) {
         (self.tx, self.rx)
     }
