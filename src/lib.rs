@@ -43,21 +43,22 @@ where
     EnvironmentError(E),
 }
 
-pub trait Environment<S, A, H, E, const MAX_LEN: usize>
+pub trait Environment<S, A, H, E, const COMMAND_LEN: usize>
 where
     S: Read<u8> + Write<u8>,
-    A: autocomplete::Autocomplete<MAX_LEN>,
-    H: history::History<MAX_LEN>,
+    A: autocomplete::Autocomplete<COMMAND_LEN>,
+    H: history::History<COMMAND_LEN>,
 {
     fn command(
         &mut self,
-        shell: &mut UShell<S, A, H, MAX_LEN>,
+        shell: &mut UShell<S, A, H, COMMAND_LEN>,
         cmd: &str,
         args: &str,
     ) -> Result<(), SpinError<S, E>>;
+
     fn control(
         &mut self,
-        shell: &mut UShell<S, A, H, MAX_LEN>,
+        shell: &mut UShell<S, A, H, COMMAND_LEN>,
         code: u8,
     ) -> Result<(), SpinError<S, E>>;
 }

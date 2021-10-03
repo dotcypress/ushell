@@ -14,6 +14,14 @@ impl<const COMMAND_LEN: usize> Autocomplete<COMMAND_LEN> for NoAutocomplete {
     }
 }
 
+pub struct FnAutocomplete<const COMMAND_LEN: usize>(fn(&str) -> Option<String<COMMAND_LEN>>);
+
+impl<const COMMAND_LEN: usize> Autocomplete<COMMAND_LEN> for FnAutocomplete<COMMAND_LEN> {
+    fn suggest(&self, prefix: &str) -> Option<String<COMMAND_LEN>> {
+        self.0(prefix)
+    }
+}
+
 pub struct StaticAutocomplete<const N: usize>(pub [&'static str; N]);
 
 impl<const COMMAND_LEN: usize, const N: usize> Autocomplete<COMMAND_LEN> for StaticAutocomplete<N> {

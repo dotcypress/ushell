@@ -10,11 +10,11 @@ pub type ShellResult<S> = Result<(), ShellError<S>>;
 pub type SpinResult<S, E> = Result<(), SpinError<S, E>>;
 pub type PollResult<'a, S> = Result<Option<Input<'a>>, ShellError<S>>;
 
-pub struct UShell<S, A, H, const MAX_LEN: usize> {
+pub struct UShell<S, A, H, const COMMAND_LEN: usize> {
     serial: S,
     autocomplete: A,
     history: H,
-    editor_buf: [u8; MAX_LEN],
+    editor_buf: [u8; COMMAND_LEN],
     editor_len: usize,
     cursor: usize,
     control: bool,
@@ -23,11 +23,11 @@ pub struct UShell<S, A, H, const MAX_LEN: usize> {
     history_on: bool,
 }
 
-impl<S, A, H, const MAX_LEN: usize> UShell<S, A, H, MAX_LEN>
+impl<S, A, H, const COMMAND_LEN: usize> UShell<S, A, H, COMMAND_LEN>
 where
     S: serial::Read<u8> + serial::Write<u8>,
-    A: Autocomplete<MAX_LEN>,
-    H: History<MAX_LEN>,
+    A: Autocomplete<COMMAND_LEN>,
+    H: History<COMMAND_LEN>,
 {
     pub fn new(serial: S, autocomplete: A, history: H) -> Self {
         Self {
@@ -35,7 +35,7 @@ where
             autocomplete,
             history,
             cursor: 0,
-            editor_buf: [0; MAX_LEN],
+            editor_buf: [0; COMMAND_LEN],
             editor_len: 0,
             autocomplete_on: true,
             history_on: true,
@@ -71,7 +71,7 @@ where
         self.editor_len = 0;
     }
 
-    pub fn spin<E, ENV: Environment<S, A, H, E, MAX_LEN>>(
+    pub fn spin<E, ENV: Environment<S, A, H, E, COMMAND_LEN>>(
         &mut self,
         env: &mut ENV,
     ) -> SpinResult<S, E> {
@@ -82,13 +82,13 @@ where
                 Ok(None) => continue,
                 Ok(Some(Input::Control(code))) => env.control(self, code)?,
                 Ok(Some(Input::Command((cmd, args)))) => {
-                    let mut cmd_buf = [0; MAX_LEN];
+                    let mut cmd_buf = [0; COMMAND_LEN];
                     cmd_buf[..cmd.len()].copy_from_slice(cmd.as_bytes());
                     let cmd = core::str::from_utf8(&cmd_buf[..cmd.len()])
                         .map_err(ShellError::BadInputError)
                         .map_err(SpinError::ShellError)?;
 
-                    let mut args_buf = [0; MAX_LEN];
+                    let mut args_buf = [0; COMMAND_LEN];
                     args_buf[..args.len()].copy_from_slice(args.as_bytes());
                     let args = core::str::from_utf8(&args_buf[..args.len()])
                         .map_err(ShellError::BadInputError)
@@ -300,11 +300,11 @@ where
     }
 }
 
-impl<S, A, H, const MAX_LEN: usize> fmt::Write for UShell<S, A, H, MAX_LEN>
+impl<S, A, H, const COMMAND_LEN: usize> fmt::Write for UShell<S, A, H, COMMAND_LEN>
 where
     S: serial::Read<u8> + serial::Write<u8>,
-    A: Autocomplete<MAX_LEN>,
-    H: History<MAX_LEN>,
+    A: Autocomplete<COMMAND_LEN>,
+    H: History<COMMAND_LEN>,
 {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         s.as_bytes()
