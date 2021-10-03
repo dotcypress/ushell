@@ -35,6 +35,33 @@ pub enum Input<'a> {
     Command((&'a str, &'a str)),
 }
 
+pub enum SpinError<S, E>
+where
+    S: Read<u8> + Write<u8>,
+{
+    ShellError(ShellError<S>),
+    EnvironmentError(E),
+}
+
+pub trait Environment<S, A, H, E, const MAX_LEN: usize>
+where
+    S: Read<u8> + Write<u8>,
+    A: autocomplete::Autocomplete<MAX_LEN>,
+    H: history::History<MAX_LEN>,
+{
+    fn command(
+        &mut self,
+        shell: &mut UShell<S, A, H, MAX_LEN>,
+        cmd: &str,
+        args: &str,
+    ) -> Result<(), SpinError<S, E>>;
+    fn control(
+        &mut self,
+        shell: &mut UShell<S, A, H, MAX_LEN>,
+        code: u8,
+    ) -> Result<(), SpinError<S, E>>;
+}
+
 pub struct Serial<W, TX: Write<W>, RX: Read<W>> {
     w: PhantomData<W>,
     tx: TX,

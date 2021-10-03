@@ -7,6 +7,7 @@ use crate::history::History;
 use crate::*;
 
 pub type ShellResult<S> = Result<(), ShellError<S>>;
+pub type SpinResult<S, E> = Result<(), SpinError<S, E>>;
 pub type PollResult<'a, S> = Result<Option<Input<'a>>, ShellError<S>>;
 
 pub struct UShell<S, A, H, const MAX_LEN: usize> {
@@ -59,6 +60,10 @@ where
         &mut self.history
     }
 
+    pub fn get_serial_mut(&mut self) -> &mut S {
+        &mut self.serial
+    }
+
     pub fn reset(&mut self) {
         self.control = false;
         self.escape = false;
@@ -66,8 +71,33 @@ where
         self.editor_len = 0;
     }
 
-    pub fn serial(&mut self) -> &mut S {
-        &mut self.serial
+    pub fn spin<E, ENV: Environment<S, A, H, E, MAX_LEN>>(
+        &mut self,
+        env: &mut ENV,
+    ) -> SpinResult<S, E> {
+        loop {
+            match self.poll() {
+                Err(ShellError::WouldBlock) => return Ok(()),
+                Err(err) => return Err(SpinError::ShellError(err)),
+                Ok(None) => continue,
+                Ok(Some(Input::Control(code))) => env.control(self, code)?,
+                Ok(Some(Input::Command((cmd, args)))) => {
+                    let mut cmd_buf = [0; MAX_LEN];
+                    cmd_buf[..cmd.len()].copy_from_slice(cmd.as_bytes());
+                    let cmd = core::str::from_utf8(&cmd_buf[..cmd.len()])
+                        .map_err(ShellError::BadInputError)
+                        .map_err(SpinError::ShellError)?;
+
+                    let mut args_buf = [0; MAX_LEN];
+                    args_buf[..args.len()].copy_from_slice(args.as_bytes());
+                    let args = core::str::from_utf8(&args_buf[..args.len()])
+                        .map_err(ShellError::BadInputError)
+                        .map_err(SpinError::ShellError)?;
+
+                    env.command(self, cmd, args)?
+                }
+            };
+        }
     }
 
     pub fn poll(&mut self) -> PollResult<S> {
