@@ -10,11 +10,11 @@ pub type ShellResult<S> = Result<(), ShellError<S>>;
 pub type SpinResult<S, E> = Result<(), SpinError<S, E>>;
 pub type PollResult<'a, S> = Result<Option<Input<'a>>, ShellError<S>>;
 
-pub struct UShell<S, A, H, const COMMAND_LEN: usize> {
+pub struct UShell<S, A, H, const CMD_LEN: usize> {
     serial: S,
     autocomplete: A,
     history: H,
-    editor_buf: [u8; COMMAND_LEN],
+    editor_buf: [u8; CMD_LEN],
     editor_len: usize,
     cursor: usize,
     control: bool,
@@ -23,11 +23,11 @@ pub struct UShell<S, A, H, const COMMAND_LEN: usize> {
     history_on: bool,
 }
 
-impl<S, A, H, const COMMAND_LEN: usize> UShell<S, A, H, COMMAND_LEN>
+impl<S, A, H, const CMD_LEN: usize> UShell<S, A, H, CMD_LEN>
 where
     S: serial::Read<u8> + serial::Write<u8>,
-    A: Autocomplete<COMMAND_LEN>,
-    H: History<COMMAND_LEN>,
+    A: Autocomplete<CMD_LEN>,
+    H: History<CMD_LEN>,
 {
     pub fn new(serial: S, autocomplete: A, history: H) -> Self {
         Self {
@@ -35,7 +35,7 @@ where
             autocomplete,
             history,
             cursor: 0,
-            editor_buf: [0; COMMAND_LEN],
+            editor_buf: [0; CMD_LEN],
             editor_len: 0,
             autocomplete_on: true,
             history_on: true,
@@ -71,7 +71,7 @@ where
         self.editor_len = 0;
     }
 
-    pub fn spin<E, ENV: Environment<S, A, H, E, COMMAND_LEN>>(
+    pub fn spin<E, ENV: Environment<S, A, H, E, CMD_LEN>>(
         &mut self,
         env: &mut ENV,
     ) -> SpinResult<S, E> {
@@ -82,17 +82,13 @@ where
                 Ok(None) => continue,
                 Ok(Some(Input::Control(code))) => env.control(self, code)?,
                 Ok(Some(Input::Command((cmd, args)))) => {
-                    let mut cmd_buf = [0; COMMAND_LEN];
+                    let mut cmd_buf = [0; CMD_LEN];
                     cmd_buf[..cmd.len()].copy_from_slice(cmd.as_bytes());
-                    let cmd = core::str::from_utf8(&cmd_buf[..cmd.len()])
-                        .map_err(ShellError::BadInputError)
-                        .map_err(SpinError::ShellError)?;
+                    let cmd = core::str::from_utf8(&cmd_buf[..cmd.len()])?;
 
-                    let mut args_buf = [0; COMMAND_LEN];
+                    let mut args_buf = [0; CMD_LEN];
                     args_buf[..args.len()].copy_from_slice(args.as_bytes());
-                    let args = core::str::from_utf8(&args_buf[..args.len()])
-                        .map_err(ShellError::BadInputError)
-                        .map_err(SpinError::ShellError)?;
+                    let args = core::str::from_utf8(&args_buf[..args.len()])?;
 
                     env.command(self, cmd, args)?
                 }
@@ -141,8 +137,7 @@ where
                     }
                     control::DEL | control::BS => self.delete_at_cursor()?,
                     control::CR => {
-                        let line = from_utf8(&self.editor_buf[..self.editor_len])
-                            .map_err(ShellError::BadInputError)?;
+                        let line = from_utf8(&self.editor_buf[..self.editor_len])?;
                         self.history
                             .push(line)
                             .map_err(|_| ShellError::HistoryError)?;
@@ -171,8 +166,8 @@ where
     pub fn clear(&mut self) -> ShellResult<S> {
         self.cursor = 0;
         self.editor_len = 0;
-        self.write_str("\x1b[H\x1b[2J")
-            .map_err(ShellError::FormatError)
+        self.write_str("\x1b[H\x1b[2J")?;
+        Ok(())
     }
 
     pub fn bell(&mut self) -> ShellResult<S> {
@@ -187,7 +182,7 @@ where
 
     fn write_at_cursor(&mut self, byte: u8) -> ShellResult<S> {
         if self.cursor == self.editor_buf.len() {
-            return self.bell();
+            self.bell()?;
         } else if self.cursor < self.editor_len {
             block!(self.serial.write(byte)).map_err(ShellError::WriteError)?;
 
@@ -197,58 +192,59 @@ where
             self.cursor += 1;
             self.editor_len += 1;
 
-            self.write_str("\x1b[s\x1b[K")
-                .map_err(ShellError::FormatError)?;
+            self.write_str("\x1b[s\x1b[K")?;
             for b in &self.editor_buf[self.cursor..self.editor_len] {
                 block!(self.serial.write(*b)).map_err(ShellError::WriteError)?;
             }
-            self.write_str("\x1b[u").map_err(ShellError::FormatError)
+            self.write_str("\x1b[u")?;
         } else {
             self.editor_buf[self.cursor] = byte;
             self.cursor += 1;
             self.editor_len += 1;
-            block!(self.serial.write(byte)).map_err(ShellError::WriteError)
+            block!(self.serial.write(byte)).map_err(ShellError::WriteError)?;
         }
+        Ok(())
     }
 
     fn delete_at_cursor(&mut self) -> ShellResult<S> {
         if self.cursor == 0 {
             self.bell()?;
-            return Ok(());
         } else if self.cursor < self.editor_len {
             self.editor_buf
                 .copy_within(self.cursor..self.editor_len, self.cursor - 1);
             self.cursor -= 1;
             self.editor_len -= 1;
-            self.write_str("\x1b[D\x1b[s\x1b[K")
-                .map_err(ShellError::FormatError)?;
+            self.write_str("\x1b[D\x1b[s\x1b[K")?;
             for b in &self.editor_buf[self.cursor..self.editor_len] {
                 block!(self.serial.write(*b)).map_err(ShellError::WriteError)?;
             }
-            self.write_str("\x1b[u").map_err(ShellError::FormatError)
+            self.write_str("\x1b[u")?;
         } else {
             self.cursor -= 1;
             self.editor_len -= 1;
-            self.write_str("\x08 \x08").map_err(ShellError::FormatError)
+            self.write_str("\x08 \x08")?;
         }
+        Ok(())
     }
 
     fn dpad_left(&mut self) -> ShellResult<S> {
         if self.cursor > 0 {
             self.cursor -= 1;
-            self.write_str("\x1b[D").map_err(ShellError::FormatError)
+            self.write_str("\x1b[D")?;
         } else {
-            self.bell()
+            self.bell()?;
         }
+        Ok(())
     }
 
     fn dpad_right(&mut self) -> ShellResult<S> {
         if self.cursor < self.editor_len {
             self.cursor += 1;
-            self.write_str("\x1b[C").map_err(ShellError::FormatError)
+            self.write_str("\x1b[C")?;
         } else {
-            self.bell()
+            self.bell()?;
         }
+        Ok(())
     }
 
     fn dpad_up(&mut self) -> ShellResult<S> {
@@ -272,39 +268,40 @@ where
     }
 
     fn suggest(&mut self) -> ShellResult<S> {
-        let prefix =
-            from_utf8(&self.editor_buf[..self.cursor]).map_err(ShellError::BadInputError)?;
+        let prefix = from_utf8(&self.editor_buf[..self.cursor])?;
         match self.autocomplete.suggest(prefix) {
-            None => self.bell(),
+            None => self.bell()?,
             Some(suffix) => {
                 let bytes = suffix.as_bytes();
                 self.editor_buf[self.cursor..(self.cursor + bytes.len())].copy_from_slice(bytes);
                 self.cursor += bytes.len();
                 self.editor_len = self.cursor;
-                write!(self, "\x1b[K{}", suffix.as_str()).map_err(ShellError::FormatError)
+                write!(self, "\x1b[K{}", suffix.as_str())?;
             }
         }
+        Ok(())
     }
 
     fn replace_editor_buf(&mut self, line: &str) -> ShellResult<S> {
         let cursor = self.cursor;
         if cursor > 0 {
-            write!(self, "\x1b[{}D", cursor).map_err(ShellError::FormatError)?;
+            write!(self, "\x1b[{}D", cursor)?;
         }
 
         let bytes = line.as_bytes();
         self.editor_len = bytes.len();
         self.cursor = bytes.len();
         self.editor_buf[..bytes.len()].copy_from_slice(bytes);
-        write!(self, "\x1b[K{}", line).map_err(ShellError::FormatError)
+        write!(self, "\x1b[K{}", line)?;
+        Ok(())
     }
 }
 
-impl<S, A, H, const COMMAND_LEN: usize> fmt::Write for UShell<S, A, H, COMMAND_LEN>
+impl<S, A, H, const CMD_LEN: usize> fmt::Write for UShell<S, A, H, CMD_LEN>
 where
     S: serial::Read<u8> + serial::Write<u8>,
-    A: Autocomplete<COMMAND_LEN>,
-    H: History<COMMAND_LEN>,
+    A: Autocomplete<CMD_LEN>,
+    H: History<CMD_LEN>,
 {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         s.as_bytes()

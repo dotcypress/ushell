@@ -6,8 +6,7 @@ extern crate heapless;
 extern crate nb;
 extern crate uluru;
 
-use core::fmt;
-use core::{marker::PhantomData, str::Utf8Error};
+use core::{fmt, marker::PhantomData, str::Utf8Error};
 use hal::serial::{Read, Write};
 
 pub mod autocomplete;
@@ -30,9 +29,22 @@ where
     HistoryError,
 }
 
-pub enum Input<'a> {
-    Control(u8),
-    Command((&'a str, &'a str)),
+impl<S> From<fmt::Error> for ShellError<S>
+where
+    S: Read<u8> + Write<u8>,
+{
+    fn from(err: fmt::Error) -> Self {
+        ShellError::FormatError(err)
+    }
+}
+
+impl<S> From<Utf8Error> for ShellError<S>
+where
+    S: Read<u8> + Write<u8>,
+{
+    fn from(err: Utf8Error) -> Self {
+        ShellError::BadInputError(err)
+    }
 }
 
 pub enum SpinError<S, E>
@@ -43,24 +55,52 @@ where
     EnvironmentError(E),
 }
 
-pub trait Environment<S, A, H, E, const COMMAND_LEN: usize>
+impl<S, E> From<ShellError<S>> for SpinError<S, E>
 where
     S: Read<u8> + Write<u8>,
-    A: autocomplete::Autocomplete<COMMAND_LEN>,
-    H: history::History<COMMAND_LEN>,
+{
+    fn from(err: ShellError<S>) -> Self {
+        SpinError::ShellError(err)
+    }
+}
+
+impl<S, E> From<fmt::Error> for SpinError<S, E>
+where
+    S: Read<u8> + Write<u8>,
+{
+    fn from(err: fmt::Error) -> Self {
+        SpinError::ShellError(err.into())
+    }
+}
+
+impl<S, E> From<Utf8Error> for SpinError<S, E>
+where
+    S: Read<u8> + Write<u8>,
+{
+    fn from(err: Utf8Error) -> Self {
+        SpinError::ShellError(err.into())
+    }
+}
+
+pub enum Input<'a> {
+    Control(u8),
+    Command((&'a str, &'a str)),
+}
+
+pub trait Environment<S, A, H, E, const CMD_LEN: usize>
+where
+    S: Read<u8> + Write<u8>,
+    A: autocomplete::Autocomplete<CMD_LEN>,
+    H: history::History<CMD_LEN>,
 {
     fn command(
         &mut self,
-        shell: &mut UShell<S, A, H, COMMAND_LEN>,
+        shell: &mut UShell<S, A, H, CMD_LEN>,
         cmd: &str,
         args: &str,
-    ) -> Result<(), SpinError<S, E>>;
+    ) -> SpinResult<S, E>;
 
-    fn control(
-        &mut self,
-        shell: &mut UShell<S, A, H, COMMAND_LEN>,
-        code: u8,
-    ) -> Result<(), SpinError<S, E>>;
+    fn control(&mut self, shell: &mut UShell<S, A, H, CMD_LEN>, code: u8) -> SpinResult<S, E>;
 }
 
 pub struct Serial<W, TX: Write<W>, RX: Read<W>> {
