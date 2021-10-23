@@ -136,7 +136,7 @@ dependencies = [
 
 [[package]]
 name = "ushell"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "embedded-hal",
  "heapless",
