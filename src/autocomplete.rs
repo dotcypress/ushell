@@ -26,7 +26,7 @@ pub struct StaticAutocomplete<const N: usize>(pub [&'static str; N]);
 
 impl<const CMD_LEN: usize, const N: usize> Autocomplete<CMD_LEN> for StaticAutocomplete<N> {
     fn suggest(&self, prefix: &str) -> Option<String<CMD_LEN>> {
-        if prefix.len() == 0 {
+        if prefix.is_empty() {
             return None;
         }
         for item in self.0.iter() {

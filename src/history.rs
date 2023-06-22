@@ -41,11 +41,12 @@ impl<const CMD_LEN: usize, const CAP: usize> History<CMD_LEN> for LRUHistory<CMD
     }
 
     fn push(&mut self, command: &str) -> Result<(), ()> {
-        if command.len() > 0 && CAP > 0 {
-            if self.history.find(|item| item.as_str() == command).is_none() {
-                let history_entry = String::from_str(command)?;
-                self.history.insert(history_entry);
-            }
+        if !command.is_empty()
+            && CAP > 0
+            && self.history.find(|item| item.as_str() == command).is_none()
+        {
+            let history_entry = String::from_str(command)?;
+            self.history.insert(history_entry);
         }
         self.cursor = 0;
         Ok(())

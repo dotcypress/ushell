@@ -144,7 +144,7 @@ where
                         self.editor_len = 0;
                         self.cursor = 0;
                         return Ok(Some(Input::Command(
-                            line.split_once(" ").unwrap_or((line, &"")),
+                            line.split_once(' ').unwrap_or((line, "")),
                         )));
                     }
                     _ => {
@@ -182,26 +182,30 @@ where
 
     fn write_at_cursor(&mut self, byte: u8) -> ShellResult<S> {
         if self.cursor == self.editor_buf.len() {
-            self.bell()?;
-        } else if self.cursor < self.editor_len {
-            block!(self.serial.write(byte)).map_err(ShellError::WriteError)?;
+            return self.bell();
+        }
 
+        if self.cursor < self.editor_len && self.editor_len < CMD_LEN {
+            block!(self.serial.write(byte)).map_err(ShellError::WriteError)?;
             self.editor_buf
                 .copy_within(self.cursor..self.editor_len, self.cursor + 1);
             self.editor_buf[self.cursor] = byte;
             self.cursor += 1;
             self.editor_len += 1;
-
             self.write_str("\x1b[s\x1b[K")?;
             for b in &self.editor_buf[self.cursor..self.editor_len] {
                 block!(self.serial.write(*b)).map_err(ShellError::WriteError)?;
             }
             self.write_str("\x1b[u")?;
+        } else if self.cursor < self.editor_len {
+            block!(self.serial.write(byte)).map_err(ShellError::WriteError)?;
+            self.editor_buf[self.cursor] = byte;
+            self.cursor += 1;
         } else {
+            block!(self.serial.write(byte)).map_err(ShellError::WriteError)?;
             self.editor_buf[self.cursor] = byte;
             self.cursor += 1;
             self.editor_len += 1;
-            block!(self.serial.write(byte)).map_err(ShellError::WriteError)?;
         }
         Ok(())
     }
