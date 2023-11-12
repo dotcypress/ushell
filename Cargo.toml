@@ -13,6 +13,5 @@ heapless = "0.7.1"
 nb = "1.0.0"
 uluru = "2.1.1"
 
-[dependencies.embedded-hal]
-features = ["unproven"]
-version = "0.2.4"
+[dependencies.embedded-io]
+version = "0.6.1"
