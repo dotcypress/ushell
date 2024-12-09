@@ -1,21 +1,21 @@
 #![no_std]
 #![deny(unsafe_code)]
 
-extern crate embedded_hal as hal;
 extern crate heapless;
 extern crate nb;
 extern crate uluru;
 
-use core::{fmt, marker::PhantomData, str::Utf8Error};
-use hal::serial::{Read, Write};
-
+pub mod serial;
 pub mod autocomplete;
 pub mod control;
 pub mod history;
 
 mod shell;
 
+use core::{fmt, marker::PhantomData, str::Utf8Error};
 pub use shell::*;
+pub use serial::*;
+
 
 pub enum ShellError<S>
 where

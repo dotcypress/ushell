@@ -1,5 +1,4 @@
 use core::{fmt::Write, str::from_utf8};
-use hal::serial;
 use nb::block;
 
 use crate::autocomplete::Autocomplete;
